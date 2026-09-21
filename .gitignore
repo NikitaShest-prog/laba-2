@@ -1,0 +1,7 @@
+.DS_Store
+maun
+*.dSYM/
+*.exe
+*.o
+*.out
+.vscode/
