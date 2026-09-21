@@ -1,12 +1,14 @@
 #include <stdio.h>
 int main()
 {
-    int buffer_time;
+    int buffer_time = 0;
     int current_day = 1;
     int current_hour = 8;
     int time_work;
-    const int inventory[10] = {0, 1, 3, 5, 5, 0, 2, 9, 1, 0};
+    int inventory[10] = {0, 1, 3, 5, 5, 0, 2, 9, 1, 0};
     int choice;
+    int slot_index = 0;
+    int ID_item = 0;
     do {
         printf("Меню:\n");
         printf("[0] выход из игры\n");
@@ -38,12 +40,31 @@ int main()
                     scanf("%*s");
                 }
                 break;
-            case 3:
-
+            case 3: 
+                int size_inventory = sizeof(inventory) / sizeof(inventory[0]);
+                for (int i = 0; i < size_inventory; i++) {
+                    printf("Слот %d: [%d]\n", i, inventory[i]);
+                }
                 break;
             case 4:
+                printf("Введите индекс слота от 0 до 9: ");
+                scanf("%d", &slot_index);
+                printf("Введите ID предмета: ");
+                scanf("%d", &ID_item);
+                if (slot_index <= 9 & slot_index >= 0) {
+                    inventory[slot_index] = ID_item;
+                } else {
+                    printf("Вы глупец\n");
+                }
                 break;
             case 5:
+                printf("Введите индекс слота от 0 до 9: ");
+                scanf("%d", &slot_index);
+                if (slot_index <= 9 & slot_index >= 0) {
+                    inventory[slot_index] = 0;
+                } else {
+                    printf("Вы глупец\n");
+                }
                 break;
             case 6:
                 break;
