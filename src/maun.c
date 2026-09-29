@@ -139,7 +139,7 @@ int main()
                                     if (inventory[i-1] == ID_item2 || inventory[i+1] == ID_item2) {
                                         if (inventory[i-1] == ID_item2) {
                                             printf("Слот первого предмета: %d Слот второго предмета: %d\n", i, i-1);
-                                        } else {
+                                        } else if (inventory[i+1] == ID_item2) {
                                             printf("Слот первого предмета: %d Слот второго предмета: %d\n", i, i+1);
                                         } 
                                     } else {
@@ -148,7 +148,6 @@ int main()
                                     break;
                                 }
                             }
-                            break;
                         }
                     } else {
                         printf("Вы глупец\n");
