@@ -4,11 +4,13 @@ int main()
     int buffer_time = 0;
     int current_day = 1;
     int current_hour = 8;
-    int time_work;
+    int time_work = 0;
     int inventory[10] = {0, 1, 3, 5, 5, 0, 2, 9, 1, 0};
-    int choice;
+    int choice = 0;
     int slot_index = 0;
-    int ID_item = 0;
+    int ID_item1 = 0;
+    int ID_item2 = 0;
+    int size_inventory = sizeof(inventory) / sizeof(inventory[0]);
     do {
         printf("Меню:\n");
         printf("[0] выход из игры\n");
@@ -40,33 +42,87 @@ int main()
                     scanf("%*s");
                 }
                 break;
-            case 3: 
-                int size_inventory = sizeof(inventory) / sizeof(inventory[0]);
+            case 3:
                 for (int i = 0; i < size_inventory; i++) {
                     printf("Слот %d: [%d]\n", i, inventory[i]);
                 }
                 break;
             case 4:
                 printf("Введите индекс слота от 0 до 9: ");
-                scanf("%d", &slot_index);
-                printf("Введите ID предмета: ");
-                scanf("%d", &ID_item);
-                if (slot_index <= 9 & slot_index >= 0) {
-                    inventory[slot_index] = ID_item;
+                if (scanf("%d", &slot_index) == 1) {
+                    printf("Введите ID предмета: ");
+                    if (scanf("%d", &ID_item1) == 1) {
+                        if (slot_index <= 9 && slot_index >= 0) {
+                            inventory[slot_index] = ID_item1;
+                        } else {
+                            printf("Вы глупец\n");
+                        }
+                    } else {
+                        printf("Вы глупец\n");
+                        scanf("%*s");
+                    }
                 } else {
                     printf("Вы глупец\n");
+                    scanf("%*s");
                 }
                 break;
             case 5:
                 printf("Введите индекс слота от 0 до 9: ");
-                scanf("%d", &slot_index);
-                if (slot_index <= 9 & slot_index >= 0) {
-                    inventory[slot_index] = 0;
+                    if (scanf("%d", &slot_index) == 1) {
+                    if (slot_index <= 9 & slot_index >= 0) {
+                        inventory[slot_index] = 0;
+                    } else {
+                        printf("Вы глупец\n");
+                    }
                 } else {
                     printf("Вы глупец\n");
+                    scanf("%*s");
                 }
                 break;
             case 6:
+                printf("Введите ID первого предмета: ");
+                if (scanf("%d", &ID_item1) == 1) {
+                    printf("Введите ID второго предмета: ");
+                    if (scanf("%d", &ID_item2) == 1) {
+                        scanf("%d", &ID_item2);
+                        for (int i = 0; i < size_inventory; i++) {
+                            if (inventory[i] == ID_item1) {
+                                switch (i) {
+                                case 9:
+                                    if (inventory[i-1] == ID_item2) {
+                                        printf("ID первого предмета: %d ID второго предмета: %d\n", i, i-1);
+                                    } else {
+                                        printf("Не лежат рядом\n");
+                                    }
+                                    break;
+                                case 0:
+                                    if (inventory[i+1] == ID_item2) {
+                                        printf("ID первого предмета: %d ID второго предмета: %d\n", i, i+1);
+                                    } else {
+                                        printf("Не лежат рядом\n");
+                                    }
+                                    break;
+                                default:
+                                    if (inventory[i-1] == ID_item2 || inventory[i+1] == ID_item2) {
+                                        if (inventory[i-1] == ID_item2) {
+                                            printf("ID первого предмета: %d ID второго предмета: %d\n", i, i-1);
+                                        } else {
+                                            printf("ID первого предмета: %d ID второго предмета: %d\n", i, i+1);
+                                        } 
+                                    } else {
+                                        printf("Не лежат рядом\n");
+                                    }
+                                }
+                            }
+                        }
+                    } else {
+                        printf("Вы глупец\n");
+                        scanf("%*s");
+                    }
+                } else {
+                    printf("Вы глупец\n");
+                    scanf("%*s");
+                }
                 break;
         }
     } while (choice!=0);
