@@ -44,7 +44,41 @@ int main()
                 break;
             case 3:
                 for (int i = 0; i < size_inventory; i++) {
-                    printf("Слот %d: [%d]\n", i, inventory[i]);
+                    switch (inventory[i])
+                    {
+                    case 0:
+                        printf("Слот %d: [%d]\n", i, inventory[i]);
+                        break;
+                    case 1:
+                        printf("Слот %d: [%d] [Дерево]\n", i, inventory[i]);
+                        break;
+                    case 2:
+                        printf("Слот %d: [%d] [Камень]\n", i, inventory[i]);
+                        break;
+                    case 3:
+                        printf("Слот %d: [%d] [Палка]\n", i, inventory[i]);
+                        break;
+                    case 4:
+                        printf("Слот %d: [%d] [Грязь]]\n", i, inventory[i]);
+                        break;
+                    case 5:
+                        printf("Слот %d: [%d] [Яйцо]\n", i, inventory[i]);
+                        break;
+                    case 6:
+                        printf("Слот %d: [%d] [Тухлое мясо]\n", i, inventory[i]);
+                        break;
+                    case 7:
+                        printf("Слот %d: [%d] [Бутылка]\n", i, inventory[i]);
+                        break;
+                    case 8:
+                        printf("Слот %d: [%d] [Кремень]\n", i, inventory[i]);
+                        break;
+                    case 9:
+                        printf("Слот %d: [%d] [Уголь]\n", i, inventory[i]);
+                        break;
+                    default:
+                        break;
+                    }
                 }
                 break;
             case 4:
@@ -84,20 +118,19 @@ int main()
                 if (scanf("%d", &ID_item1) == 1) {
                     printf("Введите ID второго предмета: ");
                     if (scanf("%d", &ID_item2) == 1) {
-                        scanf("%d", &ID_item2);
                         for (int i = 0; i < size_inventory; i++) {
                             if (inventory[i] == ID_item1) {
                                 switch (i) {
                                 case 9:
                                     if (inventory[i-1] == ID_item2) {
-                                        printf("ID первого предмета: %d ID второго предмета: %d\n", i, i-1);
+                                        printf("Слот первого предмета: %d Слот второго предмета: %d\n", i, i-1);
                                     } else {
                                         printf("Не лежат рядом\n");
                                     }
                                     break;
                                 case 0:
                                     if (inventory[i+1] == ID_item2) {
-                                        printf("ID первого предмета: %d ID второго предмета: %d\n", i, i+1);
+                                        printf("Слот первого предмета: %d Слот второго предмета: %d\n", i, i+1);
                                     } else {
                                         printf("Не лежат рядом\n");
                                     }
@@ -105,15 +138,17 @@ int main()
                                 default:
                                     if (inventory[i-1] == ID_item2 || inventory[i+1] == ID_item2) {
                                         if (inventory[i-1] == ID_item2) {
-                                            printf("ID первого предмета: %d ID второго предмета: %d\n", i, i-1);
+                                            printf("Слот первого предмета: %d Слот второго предмета: %d\n", i, i-1);
                                         } else {
-                                            printf("ID первого предмета: %d ID второго предмета: %d\n", i, i+1);
+                                            printf("Слот первого предмета: %d Слот второго предмета: %d\n", i, i+1);
                                         } 
                                     } else {
                                         printf("Не лежат рядом\n");
                                     }
+                                    break;
                                 }
                             }
+                            break;
                         }
                     } else {
                         printf("Вы глупец\n");
