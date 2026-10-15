@@ -1,5 +1,8 @@
 #include <stdio.h>
 #include <stdbool.h>
+
+#define HOURS_IN_DAY 24
+
 int current_day = 1;
 int current_hour = 8;
 void menu() {
@@ -12,12 +15,11 @@ void menu() {
     printf("[5] выбрость предмет\n");
     printf("[6] соедние ячейки\n");
 }
+
 void work_through(int time_work) {
-    int buffer_time = 0;
-    buffer_time = current_hour;
-    buffer_time += time_work;
-    current_day += buffer_time/24;
-    current_hour += buffer_time%24;
+    int total_hours = current_hour + time_work;
+    current_day += total_hours / HOURS_IN_DAY;
+    current_hour = total_hours % HOURS_IN_DAY;
 }
 void current_time(int day, int hour) {
      if (hour < 10) {
@@ -69,16 +71,6 @@ int main()
             case 2:
                 time_work = number_input("Сколько времени вы хотите проработать: ", NULL, 0);
                 work_through(time_work);
-                // printf("Сколько часов вы хотите проработать: ");
-                // if (scanf("%d", &time_work)==1) {
-                //     buffer_time = current_hour;
-                //     buffer_time += time_work;
-                //     current_day += buffer_time/24;
-                //     current_hour += buffer_time%24;
-                // } else {
-                //     printf("Вы глупец\n");
-                //     scanf("%*s");
-                // }
                 break;
             case 3:
                 for (int i = 0; i < size_inventory; i++) {
@@ -139,17 +131,17 @@ int main()
                 }
                 break;
             case 5:
-                printf("Введите индекс слота от 0 до 9: ");
-                    if (scanf("%d", &slot_index) == 1) {
-                    if (slot_index <= 9 & slot_index >= 0) {
-                        inventory[slot_index] = 0;
-                    } else {
-                        printf("Вы глупец\n");
-                    }
-                } else {
-                    printf("Вы глупец\n");
-                    scanf("%*s");
-                }
+                // printf("Введите индекс слота от 0 до 9: ");
+                //     if (scanf("%d", &slot_index) == 1) {
+                //     if (slot_index <= 9 & slot_index >= 0) {
+                //         inventory[slot_index] = 0;
+                //     } else {
+                //         printf("Вы глупец\n");
+                //     }
+                // } else {
+                //     printf("Вы глупец\n");
+                //     scanf("%*s");
+                // }
                 break;
             case 6:
                 printf("Введите ID первого предмета: ");
