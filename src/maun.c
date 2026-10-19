@@ -10,7 +10,7 @@
 #define INVENTORY_SIZE 10     // количество слотов в рюкзаке
 #define MAX_ITEMS 10          // количество видов предметов (ID от 0 до 9)
 #define EMPTY_ITEM_ID 0       // ID "пустого" слота
-#define MENU_ITEMS_COUNT 7    // количество пунктов меню (от 0 до 6)
+#define MENU_ITEMS_COUNT 9    // количество пунктов меню (от 0 до 8)
 #define MAX_WORK_HOURS 1000   // больше этого за раз работать нельзя (защита от огромных чисел)
 #define NO_SLOT -1            // "слот не найден" — такого номера слота не бывает
 #define MAX_FARMER_NAME_LEN 32 // максимальная длина имени фермера в символах (без учёта '\0')
@@ -19,6 +19,8 @@
 #define MAX_LINE_LEN 256       // максимальная длина строки, читаемой из файла
 #define ITEMS_FILE "items.txt" // файл с названиями предметов
 #define FILE_NOT_FOUND -1      // "файл не удалось открыть"
+#define ITEM_NOT_FOUND -1      // "такого названия нет в каталоге" — такого ID не бывает
+#define DIARY_FILE "diary.txt" // дневник фермера
 
 int current_day = START_DAY;
 int current_hour = START_HOUR;
@@ -32,6 +34,8 @@ void menu(const char farmer_name[]) {
     printf("[4] положить предмет в слот\n");
     printf("[5] выбрость предмет\n");
     printf("[6] соедние ячейки\n");
+    printf("[7] найти предмет в рюкзаке по названию\n");
+    printf("[8] записать состояние в дневник\n");
 }
 
 void work_through(int time_work) {
@@ -239,9 +243,78 @@ void menu_find_neighbors(const int inventory[]) {
     }
 }
 
+// [7] Обработка: ищет в каталоге ID предмета с названием name.
+// Возвращает ID или ITEM_NOT_FOUND, если такого названия нет.
+int find_item_id(const char name[], const char item_names[][MAX_NAME_LEN]) {
+    for (int id = 0; id < MAX_ITEMS; id++)
+        if (strcmp(name, item_names[id]) == 0)   // strcmp возвращает 0, если строки полностью совпадают ("==" для строк не работает)
+            return id;
+    return ITEM_NOT_FOUND;
+}
+
+// [7] Обработка: записывает в массив slots номера слотов, где лежит предмет item_id.
+// Возвращает, сколько таких слотов нашлось.
+int find_item_slots(const int inventory[], int item_id, int slots[]) {
+    int count = 0;
+    for (int i = 0; i < INVENTORY_SIZE; i++)
+        if (inventory[i] == item_id) {
+            slots[count] = i;                   // запоминаем номер слота
+            count++;
+        }
+    return count;
+}
+
+// [7] Ввод и вывод: спрашивает название, находит его ID и печатает слоты, где лежит предмет
+void menu_search_item(const int inventory[], const char item_names[][MAX_NAME_LEN]) {
+    char name[MAX_NAME_LEN];
+    read_line("Введите название предмета: ", name, sizeof(name), MAX_NAME_LEN - 1);
+    remove_newline(name);                                   // убираем случайные пробелы в конце, иначе strcmp не найдёт "Дерево "
+    int item_id = find_item_id(name, item_names);
+    if (item_id == ITEM_NOT_FOUND) {
+        printf("Предмета \"%s\" нет в каталоге\n", name);  // \" — кавычка внутри строки
+        return;                                             // дальше искать нечего — выходим из функции
+    }
+    int slots[INVENTORY_SIZE];                              // больше, чем слотов в рюкзаке, найти нельзя
+    int count = find_item_slots(inventory, item_id, slots);
+    if (count == 0) {
+        printf("Предмета \"%s\" (ID %d) нет в рюкзаке\n", name, item_id);
+    } else {
+        printf("Предмет \"%s\" (ID %d) лежит в слотах:", name, item_id);
+        for (int i = 0; i < count; i++)
+            printf(" %d", slots[i]);
+        printf("\n");
+    }
+}
+
+// [8] Обработка: дописывает в конец файла filename сводку — имя, день, час и инвентарь словами.
+// Возвращает true, если запись удалась, и false, если файл не открылся.
+bool write_diary(const char filename[], const char farmer_name[], int day, int hour,
+                 const int inventory[], const char item_names[][MAX_NAME_LEN]) {
+    FILE *file = fopen(filename, "a");             // "a" — дозапись: старые записи остаются, новая добавляется в конец
+    if (file == NULL)                              // например, нет прав на запись в папку
+        return false;
+    fprintf(file, "===== Запись в дневнике =====\n");                // fprintf — как printf, только пишет в файл
+    fprintf(file, "Фермер: %s\n", farmer_name);
+    fprintf(file, "День %d, %02d:00\n", day, hour);
+    fprintf(file, "Инвентарь:\n");
+    for (int i = 0; i < INVENTORY_SIZE; i++)
+        fprintf(file, "  Слот %d: %s\n", i, item_names[inventory[i]]);   // предмет словами, по ID из каталога
+    fprintf(file, "\n");                          // пустая строка между записями, чтобы их было легко различать
+    fclose(file);                                  // без fclose данные могут не дописаться на диск
+    return true;
+}
+
+// [8] Вывод: вызывает write_diary и сообщает пользователю результат
+void menu_write_diary(const char farmer_name[], const int inventory[], const char item_names[][MAX_NAME_LEN]) {
+    if (write_diary(DIARY_FILE, farmer_name, current_day, current_hour, inventory, item_names))
+        printf("Запись добавлена в %s\n", DIARY_FILE);
+    else
+        printf("Ошибка: не удалось открыть %s для записи\n", DIARY_FILE);
+}
+
 int main()
 {
-    int permissible_numbers[MENU_ITEMS_COUNT] = {0,1,2,3,4,5,6};
+    int permissible_numbers[MENU_ITEMS_COUNT] = {0,1,2,3,4,5,6,7,8};
     int inventory[INVENTORY_SIZE] = {0, 1, 3, 5, 5, 0, 2, 9, 1, 0};
     int choice = 0;
     setlocale(LC_ALL, "");   // "" — взять кодировку из настроек системы, без этого mbstowcs не понимает русские буквы
@@ -276,6 +349,12 @@ int main()
                 break;
             case 6:
                 menu_find_neighbors(inventory);
+                break;
+            case 7:
+                menu_search_item(inventory, item_names);
+                break;
+            case 8:
+                menu_write_diary(farmer_name, inventory, item_names);
                 break;
         }
     } while (choice!=0);
