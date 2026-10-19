@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <stdbool.h>
 #include <string.h>
+#include <locale.h>   // setlocale — включает кодировку терминала (UTF-8), чтобы правильно считать русские буквы
 
 #define HOURS_IN_DAY 24       // часов в игровых сутках
 #define START_DAY 1           // с какого дня начинается игра
@@ -12,10 +13,17 @@
 #define MENU_ITEMS_COUNT 7    // количество пунктов меню (от 0 до 6)
 #define MAX_WORK_HOURS 1000   // больше этого за раз работать нельзя (защита от огромных чисел)
 #define NO_SLOT -1            // "слот не найден" — такого номера слота не бывает
+#define MAX_FARMER_NAME_LEN 32 // максимальная длина имени фермера в символах (без учёта '\0')
+#define MAX_BYTES_PER_CHAR 4   // в кодировке UTF-8 один символ занимает от 1 до 4 байт (латиница — 1, русская буква — 2)
+#define MAX_NAME_LEN 64        // длина названия предмета в байтах вместе с '\0'
+#define MAX_LINE_LEN 256       // максимальная длина строки, читаемой из файла
+#define ITEMS_FILE "items.txt" // файл с названиями предметов
+#define FILE_NOT_FOUND -1      // "файл не удалось открыть"
 
 int current_day = START_DAY;
 int current_hour = START_HOUR;
-void menu() {
+void menu(const char farmer_name[]) {          
+    printf("\n=== Ферма фермера %s ===\n", farmer_name);     // %s — печатает строку (массив char до '\0')
     printf("Меню:\n");
     printf("[0] выход из игры\n");
     printf("[1] посмотреть на часы\n");
@@ -79,49 +87,109 @@ int range_input(const char *prompt, int min, int max) {
     return num;
 }
 
+// Проверяет, состоит ли строка только из пробелов (или вообще пустая)
+bool is_blank(const char str[]) {
+    for (int i = 0; str[i] != '\0'; i++)      // идём по строке, пока не встретим нуль-терминатор '\0'
+        if (str[i] != ' ' && str[i] != '\t')  // нашли "настоящий" символ — значит строка не пустая
+            return false;
+    return true;
+}
+
+// Считает количество символов (а не байт) в строке UTF-8.
+// strlen("Никита") вернёт 12, потому что каждая русская буква — 2 байта, а эта функция вернёт 6.
+int char_count(const char str[]) {
+    size_t count = mbstowcs(NULL, str, 0);   // стандартная функция из stdlib.h: с NULL ничего не копирует, а только считает символы
+    if (count == (size_t)-1)                 // -1 — строку не удалось разобрать (например, не настроена кодировка)
+        return strlen(str);                  // тогда считаем по байтам — строже, но программа не сломается
+    return count;
+}
+
+// Ввод строки целиком (вместе с пробелами) через fgets.
+// size — размер массива str в байтах (вместе с местом под '\0'),
+// max_chars — сколько символов максимум можно ввести.
+// Переспрашивает, если строка пустая или слишком длинная.
+void read_line(const char *prompt, char str[], int size, int max_chars) {
+    bool flag = false;
+    printf("%s", prompt);
+    do {
+        if (fgets(str, size, stdin) == NULL) {    // fgets возвращает NULL, если ввод закончился (EOF)
+            printf("\nВвод закончился, выход из игры\n");
+            exit(0);
+        }
+        int len = strlen(str);                    // strlen — сколько символов в строке до '\0'
+        bool fits = true;                         // поместилась ли вся строка в массив
+        if (len > 0 && str[len - 1] == '\n') {    // fgets сохраняет '\n' в конце строки —
+            str[len - 1] = '\0';                  // заменяем его на '\0', чтобы он не попал в имя
+        } else {                                  // '\n' нет — значит fgets прочитал не всю строку
+            int c = getchar();                    // смотрим, что осталось во вводе
+            if (c != '\n' && c != EOF) {          // там ещё символы — строка слишком длинная
+                fits = false;
+                clear_input_line();               // выбрасываем остаток, чтобы он не попал в следующий ввод
+            }
+        }
+        if (!fits || char_count(str) > max_chars) {     // не влезло в массив или символов больше, чем можно
+            printf("Слишком длинно, не больше %d символов: ", max_chars);
+        } else if (is_blank(str)) {
+            printf("Строка не может быть пустой: ");
+        } else {
+            flag = true;
+        }
+    } while (!flag);
+}
+
 void menu_work_through() {
     int time_work = range_input("Сколько времени вы хотите проработать: ", 0, MAX_WORK_HOURS);
     work_through(time_work);
 }
 
-void show_inventory(const int inventory[]) {
-    for (int i = 0; i < INVENTORY_SIZE; i++) {
-        switch (inventory[i])
-        {
-        case 0:
-            printf("Слот %d: [%d]\n", i, inventory[i]);
-            break;
-        case 1:
-            printf("Слот %d: [%d] [Дерево]\n", i, inventory[i]);
-            break;
-        case 2:
-            printf("Слот %d: [%d] [Камень]\n", i, inventory[i]);
-            break;
-        case 3:
-            printf("Слот %d: [%d] [Палка]\n", i, inventory[i]);
-            break;
-        case 4:
-            printf("Слот %d: [%d] [Грязь]\n", i, inventory[i]);
-            break;
-        case 5:
-            printf("Слот %d: [%d] [Яйцо]\n", i, inventory[i]);
-            break;
-        case 6:
-            printf("Слот %d: [%d] [Тухлое мясо]\n", i, inventory[i]);
-            break;
-        case 7:
-            printf("Слот %d: [%d] [Бутылка]\n", i, inventory[i]);
-            break;
-        case 8:
-            printf("Слот %d: [%d] [Кремень]\n", i, inventory[i]);
-            break;
-        case 9:
-            printf("Слот %d: [%d] [Уголь]\n", i, inventory[i]);
-            break;
-        default:
-            break;
-        }
+// Убирает в конце строки '\n', который оставляет fgets, '\r' (бывает в файлах из Windows) и лишние пробелы —
+// иначе "Дерево " с пробелом не совпадёт с "Дерево" при поиске через strcmp
+void remove_newline(char str[]) {
+    int len = strlen(str);
+    while (len > 0 && (str[len - 1] == '\n' || str[len - 1] == '\r' || str[len - 1] == ' ' || str[len - 1] == '\t')) {
+        len--;
+        str[len] = '\0';                     // ставим конец строки на место '\n'
     }
+}
+
+// Обработка: заполняет каталог item_names названиями из файла filename.
+// Сначала кладёт стандартные названия, потом перезаписывает их тем, что прочитано из файла.
+// Возвращает, сколько названий прочитано из файла, или FILE_NOT_FOUND, если файл не открылся.
+int load_item_names(char item_names[][MAX_NAME_LEN], const char filename[]) {
+    const char default_names[MAX_ITEMS][MAX_NAME_LEN] = {     // запасные названия, если файла нет
+        "Пусто", "Дерево", "Камень", "Палка", "Грязь",
+        "Яйцо", "Тухлое мясо", "Бутылка", "Кремень", "Уголь"
+    };
+    for (int i = 0; i < MAX_ITEMS; i++)
+        strcpy(item_names[i], default_names[i]);              // strcpy — копирует строку (через "=" строки копировать нельзя)
+
+    FILE *file = fopen(filename, "r");                         // "r" — открыть только для чтения
+    if (file == NULL)                                          // NULL — файл не найден или нет доступа
+        return FILE_NOT_FOUND;
+
+    char line[MAX_LINE_LEN];
+    int loaded = 0;                                            // сколько названий удалось прочитать
+    while (fgets(line, sizeof(line), file) != NULL) {          // читаем файл по строке, пока он не закончится
+        remove_newline(line);
+        int id;
+        int name_start = 0;                                    // с какого символа строки начинается название
+        if (sscanf(line, "%d %n", &id, &name_start) != 1)      // %d — читаем ID, %n — запоминаем, сколько символов уже прочитано
+            continue;                                          // в начале строки нет числа — пропускаем её
+        const char *name = line + name_start;                  // название — это всё, что после числа и пробела
+        if (id < 0 || id >= MAX_ITEMS || is_blank(name))       // ID вне 0..9 или нет названия — строка кривая, пропускаем
+            continue;
+        strncpy(item_names[id], name, MAX_NAME_LEN - 1);       // strncpy — копирует не больше MAX_NAME_LEN - 1 байт, чтобы не вылезти за массив
+        item_names[id][MAX_NAME_LEN - 1] = '\0';               // strncpy не всегда ставит '\0', поэтому ставим его сами
+        loaded++;
+    }
+    fclose(file);                                              // файл обязательно закрываем
+    return loaded;
+}
+
+// [3] Вывод: печатает все слоты инвентаря с названиями предметов из каталога
+void show_inventory(const int inventory[], const char item_names[][MAX_NAME_LEN]) {
+    for (int i = 0; i < INVENTORY_SIZE; i++)
+        printf("Слот %d: [%d] - %s\n", i, inventory[i], item_names[inventory[i]]);  // ID из слота -> название с этим ID
 }
 
 void put_item(int inventory[], int slot, int item_id) {
@@ -176,8 +244,19 @@ int main()
     int permissible_numbers[MENU_ITEMS_COUNT] = {0,1,2,3,4,5,6};
     int inventory[INVENTORY_SIZE] = {0, 1, 3, 5, 5, 0, 2, 9, 1, 0};
     int choice = 0;
+    setlocale(LC_ALL, "");   // "" — взять кодировку из настроек системы, без этого mbstowcs не понимает русские буквы
+    char item_names[MAX_ITEMS][MAX_NAME_LEN];                    // каталог: item_names[ID] — название предмета с этим ID
+    int loaded = load_item_names(item_names, ITEMS_FILE);
+    if (loaded == FILE_NOT_FOUND) {                              // сообщения пишем здесь, а не в load_item_names (там только обработка)
+        printf("Внимание: файл %s не найден, используются стандартные названия предметов\n", ITEMS_FILE);
+    } else if (loaded < MAX_ITEMS) {
+        printf("Внимание: из %s прочитано %d из %d названий, остальные — стандартные\n", ITEMS_FILE, loaded, MAX_ITEMS);
+    }
+    char farmer_name[MAX_FARMER_NAME_LEN * MAX_BYTES_PER_CHAR + 1];
+    read_line("Как зовут вашего фермера? ", farmer_name, sizeof(farmer_name), MAX_FARMER_NAME_LEN);
+    printf("Добро пожаловать на ферму, %s!\n", farmer_name);
     do {
-        menu();
+        menu(farmer_name);
         choice = number_input("Выберите пункт меню: ", permissible_numbers, MENU_ITEMS_COUNT);
         switch (choice) {
             case 1:
@@ -187,7 +266,7 @@ int main()
                 menu_work_through();
                 break;
             case 3:
-                show_inventory(inventory);
+                show_inventory(inventory, item_names);
                 break;
             case 4:
                 menu_put_item(inventory);
