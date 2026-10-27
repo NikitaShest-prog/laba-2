@@ -10,7 +10,7 @@
 #define INVENTORY_SIZE 10     // количество слотов в рюкзаке
 #define MAX_ITEMS 10          // количество видов предметов (ID от 0 до 9)
 #define EMPTY_ITEM_ID 0       // ID "пустого" слота
-#define MENU_ITEMS_COUNT 9    // количество пунктов меню (от 0 до 8)
+#define MENU_ITEMS_COUNT 10   // количество пунктов меню (от 0 до 9)
 #define MAX_WORK_HOURS 1000   // больше этого за раз работать нельзя (защита от огромных чисел)
 #define NO_SLOT -1            // "слот не найден" — такого номера слота не бывает
 #define MAX_FARMER_NAME_LEN 32 // максимальная длина имени фермера в символах (без учёта '\0')
@@ -21,6 +21,11 @@
 #define FILE_NOT_FOUND -1      // "файл не удалось открыть"
 #define ITEM_NOT_FOUND -1      // "такого названия нет в каталоге" — такого ID не бывает
 #define DIARY_FILE "diary.txt" // дневник фермера
+#define INPUT_FILE "input.txt"     // заказы жителей деревни для доски объявлений
+#define OUTPUT_FILE "output.txt"   // результат работы доски объявлений
+#define READY_STATUS "[ГОТОВО К СДАЧЕ]"  // предмет есть в рюкзаке
+#define IN_PROGRESS_STATUS "[В ПРОЦЕССЕ]" // предмета нет в рюкзаке
+
 
 int current_day = START_DAY;
 int current_hour = START_HOUR;
@@ -36,6 +41,7 @@ void menu(const char farmer_name[]) {
     printf("[6] соедние ячейки\n");
     printf("[7] найти предмет в рюкзаке по названию\n");
     printf("[8] записать состояние в дневник\n");
+    printf("[9] доска объявлений (вариант 9)\n");
 }
 
 void work_through(int time_work) {
@@ -312,9 +318,64 @@ void menu_write_diary(const char farmer_name[], const int inventory[], const cha
         printf("Ошибка: не удалось открыть %s для записи\n", DIARY_FILE);
 }
 
+// [9] Ввод и вывод с обработкой: читает INPUT_FILE, выводит на экран и записывает в OUTPUT_FILE
+// только задания, доступные сегодня, со статусом по наличию предмета в рюкзаке
+void menu_bulletin_board(const int inventory[], const char item_names[][MAX_NAME_LEN]) {
+    FILE *input = fopen(INPUT_FILE, "r");                   // открываем файл с заказами для чтения
+    if (input == NULL) {                                    // файла нет или нет доступа
+        printf("Ошибка: файл %s не найден в папке с программой\n", INPUT_FILE);  // сообщаем пользователю
+        return;                                             // выходим в меню
+    }
+    FILE *output = fopen(OUTPUT_FILE, "w");                 // открываем результат для записи (старый текст стирается)
+    if (output == NULL) {                                   // не удалось создать файл
+        printf("Ошибка: не удалось открыть %s для записи\n", OUTPUT_FILE);      // сообщаем пользователю
+        fclose(input);                                      // закрываем уже открытый input
+        return;                                             // выходим в меню
+    }
+
+    char header[MAX_LINE_LEN];                              // буфер под заголовок отчёта
+    snprintf(header, sizeof(header), "===== Доска объявлений, день %d =====\n", current_day);  // собираем заголовок с текущим днём
+    fputs(header, stdout);                                  // выводим заголовок на экран
+    fputs(header, output);                                  // записываем заголовок в файл
+
+    char raw[MAX_LINE_LEN];                                 // буфер для строки, прочитанной из файла
+    char line[MAX_LINE_LEN];                                // буфер для строки отчёта
+    char customer[MAX_NAME_LEN];                            // заказчик из текущей строки
+    char item[MAX_NAME_LEN];                                // требуемый предмет из текущей строки
+    int day, reward;                                        // день появления и награда из текущей строки
+    int active = 0;                                         // сколько активных заданий уже выведено
+    while (fgets(raw, sizeof(raw), input) != NULL) {        // читаем файл построчно, пока он не закончится
+        // строка "День | Заказчик | Предмет | Награда"; пробелы вокруг | пропускаются
+        sscanf(raw, " %d | %[^|]| %[^|]| %d", &day, customer, item, &reward);  // разбираем строку на четыре поля
+        remove_newline(customer);                           // убираем пробелы и \n в конце заказчика
+        remove_newline(item);                               // убираем пробелы и \n в конце предмета
+        if (day > current_day)                              // задание ещё не появилось
+            continue;                                       // пропускаем его и переходим к следующей строке
+        bool ready = false;                                 // по умолчанию предмета в рюкзаке нет
+        for (int i = 0; i < INVENTORY_SIZE; i++)            // проходим по всем слотам рюкзака
+            if (strcmp(item_names[inventory[i]], item) == 0) {   // название предмета в слоте совпало с требуемым
+                ready = true;                               // предмет есть в рюкзаке
+                break;                                      // дальше искать не нужно
+            }
+        active++;                                           // увеличиваем счётчик активных заданий (он же номер)
+        snprintf(line, sizeof(line), "%d. Заказчик: %s | Нужно: %s | Награда: %d | %s\n",   // собираем строку отчёта
+                 active, customer, item, reward,            // номер, заказчик, предмет, награда
+                 ready ? READY_STATUS : IN_PROGRESS_STATUS);    // статус: есть предмет или нет
+        fputs(line, stdout);                                // выводим строку на экран
+        fputs(line, output);                                // записываем строку в файл
+    }
+    if (active == 0) {                                      // ни одного активного задания не нашлось
+        fputs("Активных заданий нет\n", stdout);            // сообщаем на экран
+        fputs("Активных заданий нет\n", output);            // и записываем в файл
+    }
+    fclose(input);                                          // закрываем файл с заказами
+    fclose(output);                                         // закрываем файл с результатом, данные сохраняются на диск
+    printf("Результат записан в %s\n", OUTPUT_FILE);        // сообщаем, куда записан результат
+}
+
 int main()
 {
-    int permissible_numbers[MENU_ITEMS_COUNT] = {0,1,2,3,4,5,6,7,8};
+    int permissible_numbers[MENU_ITEMS_COUNT] = {0,1,2,3,4,5,6,7,8,9};
     int inventory[INVENTORY_SIZE] = {0, 1, 3, 5, 5, 0, 2, 9, 1, 0};
     int choice = 0;
     setlocale(LC_ALL, "");   // "" — взять кодировку из настроек системы, без этого mbstowcs не понимает русские буквы
@@ -355,6 +416,9 @@ int main()
                 break;
             case 8:
                 menu_write_diary(farmer_name, inventory, item_names);
+                break;
+            case 9:
+                menu_bulletin_board(inventory, item_names);
                 break;
         }
     } while (choice!=0);
