@@ -10,7 +10,7 @@
 #define INVENTORY_SIZE 10     // количество слотов в рюкзаке
 #define MAX_ITEMS 10          // количество видов предметов (ID от 0 до 9)
 #define EMPTY_ITEM_ID 0       // ID "пустого" слота
-#define MENU_ITEMS_COUNT 10   // количество пунктов меню (от 0 до 9)
+#define MENU_ITEMS_COUNT 11   // количество пунктов меню (от 0 до 10)
 #define MAX_WORK_HOURS 1000   // больше этого за раз работать нельзя (защита от огромных чисел)
 #define NO_SLOT -1            // "слот не найден" — такого номера слота не бывает
 #define MAX_FARMER_NAME_LEN 32 // максимальная длина имени фермера в символах (без учёта '\0')
@@ -25,6 +25,21 @@
 #define OUTPUT_FILE "output.txt"   // результат работы доски объявлений
 #define READY_STATUS "[ГОТОВО К СДАЧЕ]"  // предмет есть в рюкзаке
 #define IN_PROGRESS_STATUS "[В ПРОЦЕССЕ]" // предмета нет в рюкзаке
+
+#define MIN_MAP_SIZE 5          // минимальная ширина и высота карты
+#define MAX_MAP_SIZE 30         // максимальная ширина и высота карты
+#define MIN_OBSTACLE_PERCENT 15 // минимальный процент препятствий при генерации
+#define MAX_OBSTACLE_PERCENT 30 // максимальный процент препятствий при генерации
+#define COLLAPSE_INTERVAL 5     // количество успешных перемещений между обрушениями
+#define START_FLOOR 1           // номер первого этажа башни
+#define WALL_CELL '#'          // символ непроходимой стены
+#define FLOOR_CELL '.'         // символ свободного пола
+#define TREE_CELL 'T'          // символ непроходимого дерева
+#define ROCK_CELL 'R'          // символ непроходимого камня
+#define HERO_CELL '@'          // символ героя при отображении карты
+#define UP_STAIRS_CELL 'U'     // символ лестницы на следующий этаж
+#define DOWN_STAIRS_CELL 'D'   // символ лестницы для возвращения домой
+#define ABYSS_CELL ' '         // символ непроходимой бездны
 
 
 int current_day = START_DAY;
@@ -42,6 +57,7 @@ void menu(const char farmer_name[]) {
     printf("[7] найти предмет в рюкзаке по названию\n");
     printf("[8] записать состояние в дневник\n");
     printf("[9] доска объявлений (вариант 9)\n");
+    printf("[10] отправиться в приключение\n"); // показываем новый пункт меню
 }
 
 void work_through(int time_work) {
@@ -373,9 +389,13 @@ void menu_bulletin_board(const int inventory[], const char item_names[][MAX_NAME
     printf("Результат записан в %s\n", OUTPUT_FILE);        // сообщаем, куда записан результат
 }
 
+void menu_adventure(void) { // заготовка функции запуска приключения, которую дополним в следующих шагах
+    printf("Башня: обрушение пола. Приключение пока в разработке.\n"); // сообщаем, что игровая механика ещё не добавлена
+} // заканчиваем функцию и возвращаемся в главное меню
+
 int main()
 {
-    int permissible_numbers[MENU_ITEMS_COUNT] = {0,1,2,3,4,5,6,7,8,9};
+    int permissible_numbers[MENU_ITEMS_COUNT] = {0,1,2,3,4,5,6,7,8,9,10}; // разрешаем выбор всех пунктов от 0 до 10
     int inventory[INVENTORY_SIZE] = {0, 1, 3, 5, 5, 0, 2, 9, 1, 0};
     int choice = 0;
     setlocale(LC_ALL, "");   // "" — взять кодировку из настроек системы, без этого mbstowcs не понимает русские буквы
@@ -420,6 +440,9 @@ int main()
             case 9:
                 menu_bulletin_board(inventory, item_names);
                 break;
+            case 10: // обрабатываем выбор приключения
+                menu_adventure(); // вызываем заготовку приключения
+                break; // завершаем обработку пункта и возвращаемся к циклу меню
         }
     } while (choice!=0);
     printf("Конец игры");
